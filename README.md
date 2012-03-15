@@ -39,3 +39,5 @@ In your assets/stylesheets/application.css, you can add the stylesheets you want
 	.
 	*= require token-input-facebook
 	..etc.
+
+## As of 3-15-2012, the version numbers for this gem reflects the version number of the plugin.
