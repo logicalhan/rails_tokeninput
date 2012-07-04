@@ -32,6 +32,7 @@ var DEFAULT_SETTINGS = {
     animateDropdown: true,
     theme: null,
     zindex: 999,
+    resultsLimit: null,
     resultsFormatter: function(item){ return "<li>" + item[this.propertyToSearch]+ "</li>" },
     tokenFormatter: function(item) { return "<li><p>" + item[this.propertyToSearch] + "</p></li>" },
 
@@ -58,6 +59,7 @@ var DEFAULT_SETTINGS = {
 var DEFAULT_CLASSES = {
     tokenList: "token-input-list",
     token: "token-input-token",
+    tokenReadOnly: "token-input-token-readonly",
     tokenDelete: "token-input-delete-token",
     selectedToken: "token-input-selected-token",
     highlightedToken: "token-input-highlighted-token",
@@ -66,6 +68,7 @@ var DEFAULT_CLASSES = {
     dropdownItem2: "token-input-dropdown-item2",
     selectedDropdownItem: "token-input-selected-dropdown-item",
     inputToken: "token-input-input-token",
+    focused: "token-input-focused",
     disabled: "token-input-disabled"
 };
 
@@ -203,10 +206,12 @@ $.TokenList = function (input, url_or_data, settings) {
             if (settings.tokenLimit === null || settings.tokenLimit !== token_count) {
                 show_dropdown_hint();
             }
+            token_list.addClass(settings.classes.focused);
         })
         .blur(function () {
             hide_dropdown();
             $(this).val("");
+            token_list.removeClass(settings.classes.focused);
         })
         .bind("keyup keydown blur update", resize_input)
         .keydown(function (event) {
@@ -482,26 +487,30 @@ $.TokenList = function (input, url_or_data, settings) {
 
     // Inner function to a token to the list
     function insert_token(item) {
-        var this_token = settings.tokenFormatter(item);
-        this_token = $(this_token)
-          .addClass(settings.classes.token)
-          .insertBefore(input_token);
+        var $this_token = $(settings.tokenFormatter(item));
+        var readonly = item.readonly === true ? true : false;
+
+        if(readonly) $this_token.addClass(settings.classes.tokenReadOnly);
+
+        $this_token.addClass(settings.classes.token).insertBefore(input_token);
 
         // The 'delete token' button
-        $("<span>" + settings.deleteText + "</span>")
-            .addClass(settings.classes.tokenDelete)
-            .appendTo(this_token)
-            .click(function () {
-                if (!settings.disabled) {
-                    delete_token($(this).parent());
-                    hidden_input.change();
-                    return false;
-                }
-            });
+        if(!readonly) {
+          $("<span>" + settings.deleteText + "</span>")
+              .addClass(settings.classes.tokenDelete)
+              .appendTo($this_token)
+              .click(function () {
+                  if (!settings.disabled) {
+                      delete_token($(this).parent());
+                      hidden_input.change();
+                      return false;
+                  }
+              });
+        }
 
         // Store data on the token
         var token_data = item;
-        $.data(this_token.get(0), "tokeninput", item);
+        $.data($this_token.get(0), "tokeninput", item);
 
         // Save this token for duplicate checking
         saved_tokens = saved_tokens.slice(0,selected_token_index).concat([token_data]).concat(saved_tokens.slice(selected_token_index));
@@ -518,7 +527,7 @@ $.TokenList = function (input, url_or_data, settings) {
             hide_dropdown();
         }
 
-        return this_token;
+        return $this_token;
     }
 
     // Add a token to the token list based on user input
@@ -655,7 +664,7 @@ $.TokenList = function (input, url_or_data, settings) {
         var token_values = $.map(saved_tokens, function (el) {
             if(typeof settings.tokenValue == 'function')
               return settings.tokenValue.call(this, el);
-            
+
             return el[settings.tokenValue];
         });
         hidden_input.val(token_values.join(settings.tokenDelimiter));
@@ -694,13 +703,18 @@ $.TokenList = function (input, url_or_data, settings) {
         }
     }
 
+    var regexp_special_chars = new RegExp('[.\\\\+*?\\[\\^\\]$(){}=!<>|:\\-]', 'g');
+    function regexp_escape(term) {
+        return term.replace(regexp_special_chars, '\\$&');
+    }
+
     // Highlight the query part of the search term
     function highlight_term(value, term) {
-        return value.replace(new RegExp("(?![^&;]+;)(?!<[^<>]*)(" + term + ")(?![^<>]*>)(?![^&;]+;)", "gi"), "<b>$1</b>");
+        return value.replace(new RegExp("(?![^&;]+;)(?!<[^<>]*)(" + regexp_escape(term) + ")(?![^<>]*>)(?![^&;]+;)", "gi"), "<b>$1</b>");
     }
 
     function find_value_and_highlight_term(template, value, term) {
-        return template.replace(new RegExp("(?![^&;]+;)(?!<[^<>]*)(" + value + ")(?![^<>]*>)(?![^&;]+;)", "g"), highlight_term(value, term));
+        return template.replace(new RegExp("(?![^&;]+;)(?!<[^<>]*)(" + regexp_escape(value) + ")(?![^<>]*>)(?![^&;]+;)", "g"), highlight_term(value, term));
     }
 
     // Populate the results dropdown with some results
@@ -718,6 +732,10 @@ $.TokenList = function (input, url_or_data, settings) {
                     return false;
                 })
                 .hide();
+
+            if (settings.resultsLimit && results.length > settings.resultsLimit) {
+                results = results.slice(0, settings.resultsLimit);
+            }
 
             $.each(results, function(index, value) {
                 var this_li = settings.resultsFormatter(value);
@@ -871,7 +889,7 @@ $.TokenList = function (input, url_or_data, settings) {
     // Bring browser focus to the specified object.
     // Use of setTimeout is to get around an IE bug.
     // (See, e.g., http://stackoverflow.com/questions/2600186/focus-doesnt-work-in-ie)
-    // 
+    //
     // obj: a jQuery object to focus()
     function focus_with_timeout(obj) {
         setTimeout(function() { obj.focus(); }, 50);
