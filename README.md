@@ -9,6 +9,7 @@ If you require the newest tokeninput js files (which is likely), you can install
    gem 'rails_tokeninput', '1.6.1.rc1'
   
 otherwise, the 'current' release of this gem uses **Version 1.6.0**
+
 I honestly have no idea why they refuse to just update their versions on their js files. It's a bit annoying.
 
 # Included Javascripts/Stylesheets
