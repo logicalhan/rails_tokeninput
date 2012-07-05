@@ -6,7 +6,7 @@
 
 If you require the newest tokeninput js files (which is likely), you can install the pre-release version of the next version of the gem (1.6.rc1). All you have to do is put the following in your gemfile:
 
-   gem 'rails_tokeninput', '1.6.1.rc1'
+	gem 'rails_tokeninput', '1.6.1.rc1'
   
 otherwise, the 'current' release of this gem uses **Version 1.6.0**
 
